@@ -91,30 +91,26 @@ Supplying only one of `service_account_id` / `gcp_project_id`, with no email, fa
 
 ## Which inputs are required
 
-The generated table further down reports every input as `Required: no`. That is an artefact of the
-`create_namespace_export_sink` gate rather than the truth — see [the note at the end of this
-section](#why-the-generated-table-says-required-no). What a sink actually needs:
-
-### Always required
-
-With `create_namespace_export_sink` at its default of `true`:
-
-| Input | What it decides | Left out |
-| --- | --- | --- |
-| `namespace` | Which namespace's closed workflow histories are exported | The module's `""` placeholder is a value, not an omission, and the fully-qualified-ID check does not fire on an empty string. Nothing rejects it locally; creation fails |
-| `sink_name` | Identifies the sink within that namespace | Same — `""` is a value, not an omission |
-| `s3` **or** `gcs`, exactly one | Where the histories are written | Plan fails on the module's precondition: `Set exactly one destination: either s3 or gcs. Neither was set, or both were.` |
-
-`create_namespace_export_sink = false` removes all of these — the module declares no resource, the
-precondition is never evaluated, and every output falls back.
+The generated [Inputs](#inputs) table marks `namespace` and `sink_name` as required, and they are —
+Terraform refuses a call that omits either, including one that sets
+`create_namespace_export_sink = false`. Two rules are left that the table cannot express: which
+destination to set, and which keys each destination needs.
 
 ### Exactly one destination
 
-Setting both `s3` and `gcs`, or neither, is rejected — but not by `terraform validate`, which passes
-either way. Check a destination with `terraform plan`.
+`s3` and `gcs` are each shown as optional, because neither is required on its own. **Exactly one of
+them must be set.** Setting both, or neither, fails the module's precondition during plan:
 
-The provider's registry documentation lists both as plain optional attributes, because a generated
-schema page cannot express the rule. This is the only place it is written down.
+```text
+Set exactly one destination: either `s3` or `gcs`. Neither was set, or both were.
+```
+
+`terraform validate` passes either way, so check a destination with `terraform plan`. The provider's
+registry documentation also lists both as plain optional attributes, because a generated schema page
+cannot express the rule. This is the only place it is written down.
+
+`create_namespace_export_sink = false` switches the rule off with the resource: the precondition is
+attached to the count-gated resource, so a disabled module needs no destination at all.
 
 ### Required keys inside the destination
 
@@ -149,21 +145,6 @@ Supply one form or the other, not a mixture: the provider derives the ID and pro
 only when **neither** of them is set, so an email alongside just one of the pair leaves the other empty
 and the create is rejected with `Missing Service Account Configuration`. That combination is the one
 gap in the module's own check.
-
-### Optional
-
-| Input | If omitted |
-| --- | --- |
-| `enabled` | The sink starts exporting as soon as it exists — the provider defaults it to `true` |
-| `timeouts` | The provider's own defaults apply: 10 minutes to create, 5 minutes to delete |
-| `create_namespace_export_sink` | The sink is created |
-
-### Why the generated table says `Required: no`
-
-The `create_namespace_export_sink` gate lets a consumer switch this module off in place, which means
-every input needs a Terraform default — `""` or `null` — including the two the provider marks required.
-terraform-docs reports on the presence of a default, so it renders all of them as optional. This
-section is the authority on what a created sink needs.
 
 ## Usage
 
@@ -348,9 +329,9 @@ No modules.
 | <a name="input_create_namespace_export_sink"></a> [create\_namespace\_export\_sink](#input\_create\_namespace\_export\_sink) | Controls if the namespace export sink should be created. Set to `false` to disable the module without removing the call | `bool` | `true` | no |
 | <a name="input_enabled"></a> [enabled](#input\_enabled) | Optional. Whether the sink actively exports. The provider defaults it to `true`, so a sink starts exporting as soon as it exists. Setting it to `false` keeps the sink and its configuration but stops the export | `bool` | `null` | no |
 | <a name="input_gcs"></a> [gcs](#input\_gcs) | Google Cloud Storage destination. Exactly one of `s3` and `gcs` is required unless `create_namespace_export_sink` is `false`. `bucket_name` and `region` are required within it, and the service account Temporal Cloud impersonates must be identified either with `service_account_email` alone, or with both `service_account_id` and `gcp_project_id` — supply one form or the other, not a mixture. The bucket must already exist, be single-region, and be in the same region as the namespace. See the README for the prerequisites | <pre>object({<br/>    bucket_name           = string<br/>    region                = string<br/>    gcp_project_id        = optional(string)<br/>    service_account_email = optional(string)<br/>    service_account_id    = optional(string)<br/>  })</pre> | `null` | no |
-| <a name="input_namespace"></a> [namespace](#input\_namespace) | The namespace to export from, as its fully qualified ID in the form `<namespace>.<account_id>` — not the bare namespace name. Feed it the `namespace_id` output of the namespace module, or the `id` of a `temporalcloud_namespace` resource or data source. Required unless `create_namespace_export_sink` is `false` | `string` | `""` | no |
+| <a name="input_namespace"></a> [namespace](#input\_namespace) | The namespace to export from, as its fully qualified ID in the form `<namespace>.<account_id>` — not the bare namespace name. Feed it the `namespace_id` output of the namespace module, or the `id` of a `temporalcloud_namespace` resource or data source | `string` | n/a | yes |
 | <a name="input_s3"></a> [s3](#input\_s3) | Amazon S3 destination. Exactly one of `s3` and `gcs` is required unless `create_namespace_export_sink` is `false`. `aws_account_id`, `bucket_name`, `region` and `role_name` are all required within it; `kms_arn` is optional and encrypts the exported objects with a customer-managed key. The bucket must already exist and be in the same region as the namespace, and `role_name` must name an IAM role in `aws_account_id` that Temporal Cloud can assume and that can write to the bucket. See the README for the prerequisites | <pre>object({<br/>    aws_account_id = string<br/>    bucket_name    = string<br/>    region         = string<br/>    role_name      = string<br/>    kms_arn        = optional(string)<br/>  })</pre> | `null` | no |
-| <a name="input_sink_name"></a> [sink\_name](#input\_sink\_name) | Name of the export sink, unique within the namespace. Cannot be changed once set — a new value replaces the sink. Required unless `create_namespace_export_sink` is `false` | `string` | `""` | no |
+| <a name="input_sink_name"></a> [sink\_name](#input\_sink\_name) | Name of the export sink, unique within the namespace. Cannot be changed once set — a new value replaces the sink | `string` | n/a | yes |
 | <a name="input_timeouts"></a> [timeouts](#input\_timeouts) | Optional create and delete timeouts, as duration strings such as `30s` or `2h45m`. The provider's own defaults — 10 minutes to create, 5 minutes to delete — apply to whichever is omitted | <pre>object({<br/>    create = optional(string)<br/>    delete = optional(string)<br/>  })</pre> | `{}` | no |
 
 ## Outputs

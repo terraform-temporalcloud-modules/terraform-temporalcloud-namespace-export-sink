@@ -76,10 +76,17 @@ module "gcs_service_account_id" {
 
 # The create flag off: proves the module produces no resources and that every
 # output still evaluates via its try() fallback.
+#
+# `namespace` and `sink_name` are still passed. Terraform requires them whatever
+# `create_namespace_export_sink` says, so these placeholders are what a
+# switched-off call has to look like.
 module "disabled" {
   source = "../../"
 
   create_namespace_export_sink = false
+
+  namespace = ""
+  sink_name = ""
 }
 
 # Minimum viable call: a namespace, a sink name and one destination.

@@ -9,9 +9,8 @@ variable "create_namespace_export_sink" {
 ################################################################################
 
 variable "namespace" {
-  description = "The namespace to export from, as its fully qualified ID in the form `<namespace>.<account_id>` — not the bare namespace name. Feed it the `namespace_id` output of the namespace module, or the `id` of a `temporalcloud_namespace` resource or data source. Required unless `create_namespace_export_sink` is `false`"
+  description = "The namespace to export from, as its fully qualified ID in the form `<namespace>.<account_id>` — not the bare namespace name. Feed it the `namespace_id` output of the namespace module, or the `id` of a `temporalcloud_namespace` resource or data source"
   type        = string
-  default     = ""
 
   # The bare name is the likely mistake here, and the API's rejection of it does
   # not say what the correct form is. Catch it during plan instead.
@@ -22,9 +21,8 @@ variable "namespace" {
 }
 
 variable "sink_name" {
-  description = "Name of the export sink, unique within the namespace. Cannot be changed once set — a new value replaces the sink. Required unless `create_namespace_export_sink` is `false`"
+  description = "Name of the export sink, unique within the namespace. Cannot be changed once set — a new value replaces the sink"
   type        = string
-  default     = ""
 }
 
 variable "enabled" {

@@ -14,6 +14,13 @@ provider "temporalcloud" {}
 run "creates_nothing" {
   variables {
     create_namespace_export_sink = false
+
+    // `namespace` and `sink_name` are required by the provider and therefore by
+    // this module, so Terraform demands them even though the switched-off module
+    // reads neither. Empty strings are the smallest values that satisfy the
+    // fully-qualified-ID check on `namespace`.
+    namespace = ""
+    sink_name = ""
   }
 
   // "Creates nothing" is the claim this file makes, so check it directly
