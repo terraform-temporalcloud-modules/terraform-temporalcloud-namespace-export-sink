@@ -176,12 +176,26 @@ Behaviours worth knowing before you plan:
   attributes.
 - **`sink_name` cannot be changed.** A new value replaces the sink, which stops and restarts the
   export.
+- **A namespace may have more than one sink.** The Cloud API lists sinks per namespace as a paginated
+  collection (`GetNamespaceExportSinks`, page size up to 1000), the provider creates them through a
+  dedicated call rather than an upsert, and reads one back by `(namespace, sink_name)` — which is why
+  `sink_name` only has to be unique within its namespace. The Temporal Cloud UI shows a single Export
+  configuration per namespace, so one sink is what most namespaces have and what the UI can manage.
+  Nothing in the API, the provider or the published limits caps a namespace at one. Call several
+  instances of this module against the same `namespace` with different `sink_name` values to fan
+  workflow history to more than one destination.
 - **`role_name` is a name, not an ARN.** The account comes from `aws_account_id`.
 - **Export is not automatically replicated on a High Availability namespace.** The configuration is
   tied to the region it was set up in and does not follow a failover. Configure the other region
   separately if you need continuous export across one.
 - **The sink cannot be enumerated.** The provider offers no data source listing export sinks, so a sink
   created outside Terraform cannot be discovered from a configuration — import it, or recreate it here.
+- **Import takes a composite ID**, the namespace and the sink name joined by a comma and no space. The
+  provider's own documentation has no import section, so this is not discoverable from the registry:
+
+  ```bash
+  terraform import 'module.export_sink.temporalcloud_namespace_export_sink.this[0]' 'orders-prod.a1b2c,orders-archive'
+  ```
 
 ## Examples
 
