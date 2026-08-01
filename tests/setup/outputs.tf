@@ -1,15 +1,15 @@
 output "sink_name" {
-  description = "Unique export sink name for this test run, prefixed `yulei-tftest-` so leftovers from an interrupted run are identifiable"
-  value       = "yulei-tftest-${random_pet.this.id}"
+  description = "Unique export sink name for this test run, prefixed `yulei-tftest-nes-` so leftovers from an interrupted run are identifiable"
+  value       = "yulei-tftest-nes-${random_pet.this.id}"
 }
 
 output "namespace_name" {
-  description = "Unique namespace name for this test run, prefixed `yulei-tftest-` so leftovers from an interrupted run are identifiable in the Temporal Cloud account"
+  description = "Unique namespace name for this test run, prefixed `yulei-tftest-nes-` so leftovers from an interrupted run are identifiable in the Temporal Cloud account"
   # `yulei-` identifies the owner, `tftest-` distinguishes test resources from
   # anything created by hand. Satisfies the namespace name constraint: 2-64
   # chars, starts with a letter, lowercase alphanumerics and hyphens, no
   # trailing hyphen.
-  value = "yulei-tftest-${random_pet.this.id}"
+  value = "yulei-tftest-nes-${random_pet.this.id}"
 }
 
 output "available_regions" {

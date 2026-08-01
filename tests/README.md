@@ -160,7 +160,7 @@ Test resources are prefixed so they are identifiable:
 
 | Prefix | Created by |
 | --- | --- |
-| `yulei-tftest-<random>` | `*.tftest.hcl`, via `setup/` |
+| `yulei-tftest-nes-<random>` | `*.tftest.hcl`, via `setup/` |
 | `yulei-tflocal-*` | `local/`, which is never applied — these names appear only in configuration |
 
 The `examples/` directories are not covered by this prefix; they create `ex-s3`
