@@ -7,12 +7,6 @@ Terraform module which configures [Workflow History Export](https://docs.tempora
 a [Temporal Cloud](https://temporal.io/cloud) namespace, writing closed Workflow Histories to an Amazon
 S3 or Google Cloud Storage bucket you own.
 
-Both badges report the state of `main`. **CI** covers formatting, linting,
-documentation and `terraform validate`, and runs on every pull request and again
-after merge. **Apply Tests** runs against a live Temporal Cloud account, weekly and
-on demand — see [tests/README.md](tests/README.md) for what it does and does not
-cover, because creating a sink needs cloud infrastructure that CI does not have.
-
 ## Requirements
 
 The `temporalcloud` provider authenticates with an API key, read from the `TEMPORAL_CLOUD_API_KEY`
