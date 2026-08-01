@@ -16,6 +16,13 @@ run "creates_nothing" {
     create_namespace_export_sink = false
   }
 
+  // "Creates nothing" is the claim this file makes, so check it directly
+  // rather than inferring it from the output fallbacks below.
+  assert {
+    condition     = length(temporalcloud_namespace_export_sink.this) == 0
+    error_message = "create_namespace_export_sink = false must declare no resource"
+  }
+
   // Every output is count-gated behind try(); these assertions prove the
   // fallbacks evaluate rather than erroring when the module is switched off.
   assert {

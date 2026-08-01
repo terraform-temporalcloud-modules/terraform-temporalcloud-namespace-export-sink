@@ -13,9 +13,13 @@ Not usage examples — see [examples/](../examples) for those.
 `local/` passes every module input and references every output, so `terraform
 validate` fails there as soon as the variable surface changes.
 
-| File | Covers |
-| --- | --- |
-| `disabled.tftest.hcl` | `create_namespace_export_sink = false` creates nothing and every output falls back |
+| File | Covers | Creates |
+| --- | --- | --- |
+| `disabled.tftest.hcl` | `create_namespace_export_sink = false` declares no resource and every output falls back | nothing (applies an empty plan) |
+| `destination.tftest.hcl` | Every plan-time rule, at `command = plan`: exactly one destination, the fully qualified namespace, the three S3 field rules and the two GCS service account rules | nothing |
+
+Each case in `destination.tftest.hcl` is aimed at exactly one rule and leaves the
+rest satisfied, so neutralising any single rule turns exactly one run block red.
 
 ## What is not apply-tested, and why
 
@@ -30,8 +34,32 @@ There is no dry-run flag: the Cloud UI's **Verify** button has no Terraform
 equivalent. Applying against placeholder values gives at best a sink that never
 delivers, and a test that always fails is worse than none.
 
-Running it needs infrastructure this account does not have. A maintainer would
-have to provision, in a cloud account they control:
+## External access required to make this suite real
+
+This is the full list of what a maintainer would have to hold before a sink could
+be created by an automated test. None of it can be stood up from inside
+`terraform test`.
+
+**Temporal Cloud**
+
+1. `TEMPORAL_CLOUD_API_KEY` for an account that may **create namespaces** — a sink
+   attaches to a namespace, so the test has to create one to attach to. This is
+   the secret the workflow already uses; the suite needs nothing more from
+   Temporal Cloud than it already has.
+2. An account **entitled to the region the bucket is in**. The bucket region and
+   the namespace region must match, and entitlements are a per-account subset of
+   the published list, so the region cannot be chosen after the bucket exists.
+   `tests/setup/` exposes `available_regions` for that check.
+3. No other entitlement is required. Export is configured per namespace, not
+   enabled per account.
+
+**Account safety: a shared account is acceptable for this module.** A sink is
+scoped to one namespace and is destroyed with it, so a test that creates its own
+namespace cannot disturb anything else on the account. This module is the
+exception in the family — the audit log sink and metrics endpoint modules both
+replace account-wide state and need a dedicated, disposable account.
+
+The cloud side is yours, in an account you control:
 
 **For S3**
 
@@ -113,6 +141,23 @@ Two things to expect on that first run, because they are the classes of failure
 `enabled = false` and the `timeouts` input can ride along on that test once it
 exists; both are covered by `local/` today.
 
+### What stays unverifiable until that access exists
+
+Be clear about what the current suite does **not** establish, so nobody reads a
+green run as more than it is:
+
+- **That Temporal Cloud accepts any sink configuration at all.** No test reaches
+  the create path, so nothing confirms the API takes `s3` or `gcs` as this module
+  assembles them.
+- **Any value the API returns.** Every assertion here is on a `try()` fallback or
+  a rejected plan. No output is ever compared against something Temporal Cloud
+  produced, so `namespace_export_sink_id`, `_namespace`, `_s3` and `_gcs` are
+  unproven beyond their fallbacks.
+- **The region-pair and trust-policy failures above**, which are exactly the two
+  things a consumer is most likely to get wrong.
+- **`enabled` and `timeouts` end to end.** `local/` proves they type-check;
+  nothing proves the provider does anything with them.
+
 ## Running the apply tests
 
 ```bash
@@ -128,7 +173,7 @@ Without a key, every run block is skipped — a cheap way to confirm the test fi
 parse:
 
 ```text
-Failure! 0 passed, 0 failed, 1 skipped.
+Failure! 0 passed, 0 failed, 9 skipped.
 ```
 
 A syntax error looks different: it names a file and a line instead of reporting a
