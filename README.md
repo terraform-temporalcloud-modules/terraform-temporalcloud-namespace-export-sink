@@ -108,18 +108,13 @@ With `create_namespace_export_sink` at its default of `true`:
 `create_namespace_export_sink = false` removes all of these — the module declares no resource, the
 precondition is never evaluated, and every output falls back.
 
-### Exactly one destination, and why `validate` will not tell you
+### Exactly one destination
 
-The rule is enforced twice: by this module's resource precondition, and by the provider's own
-`ExactlyOneOf` validator on each of the two attributes. Neither reports it during `terraform validate`
-when the destination arrives through a module input — passing this module both destinations, or
-neither, validates cleanly, while the same values written directly on a
-`temporalcloud_namespace_export_sink` resource fail validate with `Invalid Attribute Combination`.
-Validators skip values that are not yet known, and a precondition is only evaluated at plan. Check a
-destination with `plan`, which for this provider means having an API key.
+Setting both `s3` and `gcs`, or neither, is rejected — but not by `terraform validate`, which passes
+either way. Check a destination with `terraform plan`.
 
-The provider's registry documentation lists both `s3` and `gcs` as plain optional attributes: the
-generated schema page cannot express a validator, so the rule appears nowhere upstream.
+The provider's registry documentation lists both as plain optional attributes, because a generated
+schema page cannot express the rule. This is the only place it is written down.
 
 ### Required keys inside the destination
 

@@ -64,6 +64,20 @@ destination during creation so there is no way to fake one.
 [`tests/README.md`](tests/README.md) records exactly what a maintainer would need to provision and what
 the test would look like. An honest documented gap is preferable to a test that is always red.
 
+### Why `terraform validate` proves so little here
+
+`terraform validate` does not run the provider's own validators when a value arrives through a module
+input. `ConflictsWith`, `OneOf`, `ExactlyOneOf` and the custom set validators all defer until every
+attribute they compare is *known*, and a module input is unknown during the validate walk. Verified
+both directions: a bad literal written straight onto the resource errors at validate, the same value
+behind a variable does not, and `count` is not the cause.
+
+Module-level `variable ... validation` blocks are the exception — they run at validate regardless,
+which is why the rules this module enforces itself do surface there.
+
+The consequence for the layering above: `validate` is a lint over types and the variable surface, not
+evidence that a configuration is complete or correct. Resource `precondition` blocks are likewise
+plan-time only. Only applying proves behaviour, which is what `tests/*.tftest.hcl` is for.
 ### Why examples are validated indirectly
 
 `examples/*` source the **published** module so consumers can copy them verbatim from the Terraform
