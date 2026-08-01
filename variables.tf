@@ -28,7 +28,7 @@ variable "sink_name" {
 }
 
 variable "enabled" {
-  description = "Whether the sink actively exports. Defaults to `true` when omitted. Setting it to `false` keeps the sink and its configuration but stops the export"
+  description = "Optional. Whether the sink actively exports. The provider defaults it to `true`, so a sink starts exporting as soon as it exists. Setting it to `false` keeps the sink and its configuration but stops the export"
   type        = bool
   default     = null
 }
@@ -41,7 +41,7 @@ variable "enabled" {
 ################################################################################
 
 variable "s3" {
-  description = "Amazon S3 destination. The bucket must already exist and be in the same region as the namespace, and `role_name` must name an IAM role in `aws_account_id` that Temporal Cloud can assume and that can write to the bucket. See the README for the prerequisites. Mutually exclusive with `gcs`"
+  description = "Amazon S3 destination. Exactly one of `s3` and `gcs` is required unless `create_namespace_export_sink` is `false`. `aws_account_id`, `bucket_name`, `region` and `role_name` are all required within it; `kms_arn` is optional and encrypts the exported objects with a customer-managed key. The bucket must already exist and be in the same region as the namespace, and `role_name` must name an IAM role in `aws_account_id` that Temporal Cloud can assume and that can write to the bucket. See the README for the prerequisites"
   type = object({
     aws_account_id = string
     bucket_name    = string
@@ -72,7 +72,7 @@ variable "s3" {
 }
 
 variable "gcs" {
-  description = "Google Cloud Storage destination. The bucket must already exist, be single-region, and be in the same region as the namespace. Identify the service account Temporal Cloud impersonates either with `service_account_email`, or with both `service_account_id` and `gcp_project_id`. See the README for the prerequisites. Mutually exclusive with `s3`"
+  description = "Google Cloud Storage destination. Exactly one of `s3` and `gcs` is required unless `create_namespace_export_sink` is `false`. `bucket_name` and `region` are required within it, and the service account Temporal Cloud impersonates must be identified either with `service_account_email` alone, or with both `service_account_id` and `gcp_project_id` — supply one form or the other, not a mixture. The bucket must already exist, be single-region, and be in the same region as the namespace. See the README for the prerequisites"
   type = object({
     bucket_name           = string
     region                = string
@@ -102,7 +102,7 @@ variable "gcs" {
 ################################################################################
 
 variable "timeouts" {
-  description = "Create and delete timeouts, as duration strings such as `30s` or `2h45m`"
+  description = "Optional create and delete timeouts, as duration strings such as `30s` or `2h45m`. The provider's own defaults — 10 minutes to create, 5 minutes to delete — apply to whichever is omitted"
   type = object({
     create = optional(string)
     delete = optional(string)
