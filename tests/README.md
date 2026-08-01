@@ -24,11 +24,11 @@ module's resource surface, so the gap is worth stating plainly rather than
 burying: `local/` proves the configuration type-checks, and nothing proves
 Temporal Cloud accepts it.
 
-A sink cannot be created against a destination that does not exist. Temporal Cloud
-validates the destination while creating the sink — it assumes the IAM role or
-impersonates the service account and writes a test object — so there is no
-"configure now, wire up later" path and no dry-run flag. Applying against
-placeholder values fails, and a test that always fails is worse than none.
+A sink is only useful against a destination that exists, and Temporal's own
+guidance is to pre-create the IAM role when configuring Export via Terraform.
+There is no dry-run flag: the Cloud UI's **Verify** button has no Terraform
+equivalent. Applying against placeholder values gives at best a sink that never
+delivers, and a test that always fails is worse than none.
 
 Running it needs infrastructure this account does not have. A maintainer would
 have to provision, in a cloud account they control:

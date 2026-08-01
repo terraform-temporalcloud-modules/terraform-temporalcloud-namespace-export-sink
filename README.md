@@ -31,10 +31,14 @@ before your first apply; without that setup, creation fails with a permissions e
 
 ## Prerequisites
 
-Temporal Cloud validates the destination while it creates the sink: it assumes your IAM role — or
-impersonates your service account — and writes a test object to the bucket. There is no
-"configure now, wire up later" path. If the destination is not reachable, `terraform apply` fails and
-no sink is created.
+The bucket and the identity Temporal Cloud writes with must exist **before** you apply. Temporal's own
+AWS guide is explicit about the Terraform path: "Please pre-create the role if setting up Export via
+terraform/tcld"
+([AWS S3 Export Configuration](https://docs.temporal.io/cloud/export/aws-export-s3)). The Cloud UI
+offers a [**Verify**](https://docs.temporal.io/cloud/export#verify) button that writes a test file to
+your storage before you commit the configuration; Terraform has no equivalent, so a destination that
+is not reachable surfaces either as a failed apply or as a sink that silently never delivers. Note that
+an export configuration which fails for seven consecutive days is disabled automatically.
 
 The bucket lives in **your** cloud account. `aws_account_id` and `role_name` refer to your AWS account
 and a role in it, not to anything of Temporal's.
@@ -49,8 +53,9 @@ and a role in it, not to anything of Temporal's.
      Temporal Cloud rotates across [several intermediary roles](https://docs.temporal.io/cloud/export/aws-export-s3)
      rather than using one fixed principal, so do not hand-write this list — it is the part most likely
      to be wrong and it changes.
-   - a **permissions policy** allowing it to write objects into the bucket, and, when the bucket uses a
-     customer-managed key, to use that key (`kms:GenerateDataKey` and related actions on the key ARN).
+   - a **permissions policy** allowing it to write objects into the bucket (`s3:PutObject`), and, when
+     the bucket uses a customer-managed key, `kms:GenerateDataKey` on that key ARN. Those are the
+     actions Temporal's own CloudFormation template grants.
 3. **Optionally a KMS key**, if you want the exported objects encrypted with a customer-managed key.
    Pass its ARN as `s3.kms_arn`.
 
@@ -166,7 +171,9 @@ Behaviours worth knowing before you plan:
 - **The bucket must be in the same region as the namespace**, and the two are written differently:
   `aws-us-east-1` for the namespace, `us-east-1` for the bucket. A GCS bucket must additionally be
   single-region.
-- **Exactly one of `s3` and `gcs`.** Setting both, or neither, fails during plan.
+- **Exactly one of `s3` and `gcs`.** Setting both, or neither, fails during plan, naming the module's
+  variables. The provider enforces the same rule independently, via `ExactlyOneOf` on the two
+  attributes.
 - **`sink_name` cannot be changed.** A new value replaces the sink, which stops and restarts the
   export.
 - **`role_name` is a name, not an ARN.** The account comes from `aws_account_id`.

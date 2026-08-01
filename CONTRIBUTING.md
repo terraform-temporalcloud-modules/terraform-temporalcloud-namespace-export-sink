@@ -129,9 +129,12 @@ guard, and what to expect the first time a sink test runs.
 2. **The bucket must be in the same region as the namespace**, written in two different formats —
    `aws-us-east-1` for the namespace, `us-east-1` for the bucket. A GCS bucket must also be
    single-region.
-3. **Creation validates the destination.** Temporal Cloud assumes the role or impersonates the service
-   account and writes a test object. A trust policy that does not admit Temporal Cloud's export
-   principals fails the apply with a permissions error, and the fix is in AWS or GCP, not in Terraform.
+3. **The destination has to be reachable, and Terraform cannot tell you whether it is.** Temporal
+   documents pre-creating the IAM role for the Terraform path, and the only reachability check it
+   offers — the Cloud UI's **Verify** button — has no provider equivalent; neither resource calls the
+   `ValidateNamespaceExportSink` RPC. A trust policy that does not admit Temporal Cloud's export
+   principals therefore shows up as a failed apply or as a sink that never delivers, and either way
+   the fix is in AWS or GCP, not in Terraform.
 4. **`sink_name` is immutable.** Changing it replaces the sink.
 
 When writing assertions, note that outputs wrapped in `try(x, [])` evaluate to a *tuple*, so

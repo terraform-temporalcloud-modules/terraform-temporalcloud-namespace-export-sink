@@ -10,8 +10,8 @@ bare name; taking it from a module output rather than typing it is the point of 
 
 ## Before you run this
 
-**The bucket and the IAM role are not created by this configuration.** Temporal Cloud validates the
-destination while creating the sink, so the apply fails unless both already exist:
+**The bucket and the IAM role are not created by this configuration.** Temporal's guidance is to
+pre-create the role when setting up Export via Terraform, so stand both up before you apply:
 
 - an S3 bucket in `us-east-1` — the same region as the namespace, which is `aws-us-east-1` in Temporal
   Cloud's own region format

@@ -10,8 +10,8 @@ bare name; taking it from a module output rather than typing it is the point of 
 
 ## Before you run this
 
-**The bucket and the service account are not created by this configuration.** Temporal Cloud validates
-the destination while creating the sink, so the apply fails unless both already exist:
+**The bucket and the service account are not created by this configuration.** Both must exist before
+you apply:
 
 - a **single-region** GCS bucket in `us-central1` — the same region as the namespace, which is
   `gcp-us-central1` in Temporal Cloud's own region format. Multi-region buckets are not supported.
