@@ -22,7 +22,7 @@ locals {
 
 module "namespace" {
   source  = "terraform-temporalcloud-modules/namespace/temporalcloud"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   name           = local.name
   regions        = [local.temporal_cloud_region]
@@ -41,7 +41,7 @@ module "namespace" {
 
 module "export_sink" {
   source  = "terraform-temporalcloud-modules/namespace-export-sink/temporalcloud"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   # The fully qualified namespace ID `<namespace>.<account_id>`, not the bare
   # name. Taking it from the module output rather than typing it avoids the most

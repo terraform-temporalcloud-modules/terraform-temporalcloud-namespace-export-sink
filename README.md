@@ -153,7 +153,7 @@ gap in the module's own check.
 ```hcl
 module "export_sink" {
   source  = "terraform-temporalcloud-modules/namespace-export-sink/temporalcloud"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   # The fully qualified namespace ID, not the bare name — see Notes.
   namespace = module.namespace.namespace_id
@@ -173,7 +173,7 @@ module "export_sink" {
 ```hcl
 module "export_sink" {
   source  = "terraform-temporalcloud-modules/namespace-export-sink/temporalcloud"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   namespace = module.namespace.namespace_id
   sink_name = "orders-archive"
@@ -194,7 +194,7 @@ than destroying and recreating the sink, which would lose the name:
 ```hcl
 module "export_sink" {
   source  = "terraform-temporalcloud-modules/namespace-export-sink/temporalcloud"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   namespace = module.namespace.namespace_id
   sink_name = "orders-archive"
@@ -264,7 +264,7 @@ anywhere a `for_each` on the module block is awkward:
 ```hcl
 module "export_sinks" {
   source  = "terraform-temporalcloud-modules/namespace-export-sink/temporalcloud//wrappers"
-  version = "~> 1.0"
+  version = "~> 2.0"
 
   defaults = {
     enabled = true

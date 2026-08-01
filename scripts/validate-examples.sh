@@ -49,7 +49,7 @@ for dir in examples/*/; do
 
   # Rewrite:
   #   source  = "terraform-temporalcloud-modules/namespace-export-sink/temporalcloud"
-  #   version = "~> 1.0"
+  #   version = "~> 2.0"
   # into:
   #   source = "<repo root>"
   #

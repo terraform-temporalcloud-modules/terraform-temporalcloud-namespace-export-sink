@@ -56,8 +56,8 @@ No providers.
 
 | Name | Source | Version |
 | ---- | ------ | ------- |
-| <a name="module_export_sink"></a> [export\_sink](#module\_export\_sink) | terraform-temporalcloud-modules/namespace-export-sink/temporalcloud | ~> 1.0 |
-| <a name="module_namespace"></a> [namespace](#module\_namespace) | terraform-temporalcloud-modules/namespace/temporalcloud | ~> 1.0 |
+| <a name="module_export_sink"></a> [export\_sink](#module\_export\_sink) | terraform-temporalcloud-modules/namespace-export-sink/temporalcloud | ~> 2.0 |
+| <a name="module_namespace"></a> [namespace](#module\_namespace) | terraform-temporalcloud-modules/namespace/temporalcloud | ~> 2.0 |
 
 ## Resources
 
