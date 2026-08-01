@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.1](https://github.com/terraform-temporalcloud-modules/terraform-temporalcloud-namespace-export-sink/compare/v2.0.0...v2.0.1) (2026-08-01)
+
+### Documentation
+
+* Pin the examples to v2, and release documentation changes ([a31241b](https://github.com/terraform-temporalcloud-modules/terraform-temporalcloud-namespace-export-sink/commit/a31241b84ed8bcc0cfd678ee8d3d5141c451abc2))
+
 ## [2.0.0](https://github.com/terraform-temporalcloud-modules/terraform-temporalcloud-namespace-export-sink/compare/v1.0.0...v2.0.0) (2026-08-01)
 
 ### ⚠ BREAKING CHANGES
