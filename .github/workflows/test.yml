@@ -1,0 +1,86 @@
+name: Apply Tests
+
+# These tests run against a REAL Temporal Cloud account, so they are deliberately
+# not part of the PR gate:
+#
+#   - forked PRs cannot read secrets, so the job would fail for contributors
+#   - resource creation is slow, and accounts cap how many can exist
+#   - every PR would cost money
+#
+# Today nothing here creates a billable resource: creating an export sink needs a
+# bucket and an assumable role or service account that CI does not have, and
+# Temporal Cloud validates the destination during creation, so it cannot be faked.
+# tests/README.md records that gap and what running it would take. Keep the rest of
+# this workflow as it is — it is what a sink test would need the moment one exists.
+#
+# They DO run on main after Pre-Commit passes, because a release must not be
+# published from code the apply tests reject. Release is chained after this
+# workflow, so the sequence on a merge is:
+#
+#   push to main -> Pre-Commit -> Apply Tests -> Release
+#
+# Any failure in the chain stops the release.
+on:
+  workflow_run:
+    workflows: ['Pre-Commit']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Mondays 06:00 UTC.
+    - cron: '0 6 * * 1'
+
+# Serialize. Two concurrent runs would compete for the account's resource quotas.
+# cancel-in-progress MUST stay false: cancelling mid-apply would abandon a real
+# resource with no destroy, leaking cost.
+concurrency:
+  group: apply-tests
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: terraform test
+    runs-on: ubuntu-latest
+    # Never bill the account from a fork, and when chained after Pre-Commit only
+    # proceed if that run actually passed.
+    if: >-
+      github.repository_owner == 'terraform-temporalcloud-modules' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.1
+        with:
+          terraform_wrapper: false
+
+      # First real step: prove the API answers and the key is accepted. Without
+      # this, a missing, expired or wrong-account key surfaces minutes later as a
+      # namespace that would not create, which reads as a test failure rather than
+      # a credentials problem.
+      - name: API liveness check
+        env:
+          TEMPORAL_CLOUD_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
+        run: scripts/check-api.sh
+
+      - name: Init
+        run: terraform init -backend=false
+
+      # terraform test tears down what it created, including after a failed
+      # assertion. A cancelled or crashed runner can still orphan a resource, so
+      # check the account if this job does not finish cleanly.
+      - name: Test
+        env:
+          TEMPORAL_CLOUD_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
+        run: terraform test -verbose
+
+      # Runs even when the tests fail, because that is exactly when something may
+      # have been left behind. A no-op in this module — no data source enumerates
+      # export sinks — but kept so the gap is reported in the log and so there is
+      # somewhere to implement the check if one appears.
+      - name: Check for leftover export sinks
+        if: always()
+        env:
+          TEMPORAL_CLOUD_API_KEY: ${{ secrets.TEMPORAL_CLOUD_API_KEY }}
+        run: scripts/check-orphans.sh

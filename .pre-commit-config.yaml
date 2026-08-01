@@ -1,0 +1,65 @@
+repos:
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.108.1
+    hooks:
+      - id: terraform_fmt
+      # terraform_wrapper_module_for_each is deliberately NOT enabled. It hardcodes
+      # terraform-aws-modules/<repo>/aws for the generated source addresses, and it
+      # unconditionally overwrites wrappers/README.md with an AWS S3 Terragrunt
+      # example whose variables (force_destroy, attach_elb_log_delivery_policy, ...)
+      # do not exist in this module. Only five placeholders are substituted and
+      # there is no flag to skip the README, so restoring a correct one leaves the
+      # gate permanently dirty. wrappers/ is hand-maintained instead, guarded by the
+      # local wrapper-sync hook below.
+      - id: terraform_docs
+        args:
+          - '--args=--lockfile=false'
+      - id: terraform_tflint
+        args:
+          - '--args=--only=terraform_deprecated_interpolation'
+          - '--args=--only=terraform_deprecated_index'
+          - '--args=--only=terraform_unused_declarations'
+          - '--args=--only=terraform_comment_syntax'
+          - '--args=--only=terraform_documented_outputs'
+          - '--args=--only=terraform_documented_variables'
+          - '--args=--only=terraform_typed_variables'
+          - '--args=--only=terraform_module_pinned_source'
+          - '--args=--only=terraform_naming_convention'
+          - '--args=--only=terraform_required_version'
+          - '--args=--only=terraform_required_providers'
+          - '--args=--only=terraform_standard_module_structure'
+          - '--args=--only=terraform_workspace_remote'
+      - id: terraform_validate
+        # examples/ is excluded here and validated by the local
+        # examples-validate hook below instead. As committed, the examples source
+        # the PUBLISHED module, so validating them here would check the last
+        # release rather than the working tree — meaning a module change and its
+        # example update could never land in the same PR.
+        exclude: ^examples/
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  # Replaces the drift protection lost by not running the upstream wrapper
+  # generator: fails if a root module variable is not passed through the wrapper.
+  - repo: local
+    hooks:
+      - id: wrapper-sync
+        name: Wrapper passes through all root variables
+        entry: scripts/check-wrapper-sync.sh
+        language: system
+        pass_filenames: false
+        files: ^(variables\.tf|wrappers/main\.tf)$
+
+      # Validates examples against the working tree instead of the published
+      # release, by rewriting their registry source in a temp copy. This is what
+      # lets a module change and its example update land in one PR.
+      - id: examples-validate
+        name: Examples validate against the local module
+        entry: scripts/validate-examples.sh
+        language: system
+        pass_filenames: false
+        files: ^(examples/|main\.tf|variables\.tf|outputs\.tf|versions\.tf)

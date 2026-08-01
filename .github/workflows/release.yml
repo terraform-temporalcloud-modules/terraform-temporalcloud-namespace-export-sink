@@ -1,0 +1,81 @@
+name: Release
+
+# Chained after Apply Tests, which is itself chained after Pre-Commit, so a merge
+# to main runs:
+#
+#   push to main -> Pre-Commit -> Apply Tests -> Release
+#
+# A release is therefore only ever cut from code that passed both the static gate
+# and the tests that apply against a real account. Triggering on the push directly
+# would let a broken main publish, because Release would run alongside Pre-Commit
+# rather than after it.
+#
+# The path filter that used to restrict this to *.tf changes is gone: workflow_run
+# does not support paths. Harmless, because semantic-release exits without
+# releasing when no commit warrants one.
+on:
+  workflow_run:
+    workflows: ['Apply Tests']
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    # The org default for GITHUB_TOKEN is read-only, which makes semantic-release
+    # fail with EGITNOPERMISSION when it pushes the tag and CHANGELOG commit.
+    # Granted here per job rather than raising the repo-wide default, so only
+    # this workflow can write.
+    permissions:
+      contents: write       # push the release commit and version tag
+      issues: write         # comment on released issues
+      pull-requests: write  # comment on released PRs
+    # Never cut releases from forks, and never from a failed test run. A manual
+    # dispatch is allowed through so a release skipped for unrelated reasons can be
+    # recovered without another merge.
+    if: >-
+      github.repository_owner == 'terraform-temporalcloud-modules' &&
+      (github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Explicit: releases are only ever cut from main. On a workflow_run event
+          # the default ref is already the default branch, but a manual dispatch
+          # could otherwise target something else.
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set correct Node.js version
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        # conventional-changelog-conventionalcommits is deliberately held at 9.x,
+        # NOT bumped to 10.x. At v10 the preset's handlebars templates moved out
+        # into @conventional-changelog/template, changing its output shape.
+        # semantic-release 25's @semantic-release/release-notes-generator@14 pins
+        # conventional-changelog-writer@^8, which cannot render that shape: the
+        # release notes and CHANGELOG entry come out EMPTY while commit-analyzer
+        # still resolves the version correctly, so CI passes and the breakage is
+        # silent. Revisit only when release-notes-generator moves to writer v9.
+        run: |
+          npm install \
+            @semantic-release/changelog@7.0.0 \
+            @semantic-release/git@11.0.1 \
+            conventional-changelog-conventionalcommits@9.3.1
+
+      - name: Release
+        uses: cycjimmy/semantic-release-action@v6
+        with:
+          semantic_version: 25.0.8
+        env:
+          # SEMANTIC_RELEASE_TOKEN is a PAT and is required once branch
+          # protection is enabled on main — the default GITHUB_TOKEN cannot push
+          # the release commit past a protected branch. Falls back to
+          # GITHUB_TOKEN so the workflow still works before that is configured.
+          GITHUB_TOKEN: ${{ secrets.SEMANTIC_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}

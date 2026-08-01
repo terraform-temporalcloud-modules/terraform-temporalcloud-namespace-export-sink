@@ -1,0 +1,105 @@
+name: Pre-Commit
+
+# Runs on pull requests, and again on main after merge. The second is what makes
+# the README status badge meaningful: without it the workflow never runs on main,
+# so a branch-scoped badge reports "no status". It also catches a merge that breaks
+# main even though the pull request was green.
+#
+# semantic-release marks its changelog commit with a skip-ci directive, so the
+# release push does not trigger a redundant run.
+#
+# workflow_dispatch is included so a run can be triggered by hand. GitHub honours a
+# skip-ci directive found anywhere in a commit message, including in prose, so a
+# push can be skipped unintentionally and leave the status badge stale. Without a
+# manual trigger there is no way to recover except pushing again.
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# These must match the versions contributors run locally. terraform-docs changed
+# its markdown table separator style after v0.20.0, so a mismatch makes CI reject
+# docs that were generated correctly on a developer's machine.
+env:
+  TERRAFORM_DOCS_VERSION: v0.24.0
+  TFLINT_VERSION: v0.64.0
+
+jobs:
+  collectInputs:
+    name: Collect workflow inputs
+    runs-on: ubuntu-latest
+    outputs:
+      directories: ${{ steps.dirs.outputs.directories }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Get root directories
+        id: dirs
+        uses: clowdhaus/terraform-composite-actions/directories@v1.14.0
+
+  # Validate against the oldest Terraform version each directory claims to
+  # support, so `required_version` stays honest.
+  preCommitMinVersions:
+    name: Min TF pre-commit
+    needs: collectInputs
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: ${{ fromJson(needs.collectInputs.outputs.directories) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Terraform min/max versions
+        id: minMax
+        uses: clowdhaus/terraform-min-max@v3.0.1
+        with:
+          directory: ${{ matrix.directory }}
+
+      - name: Pre-commit Terraform ${{ steps.minMax.outputs.minVersion }}
+        if: ${{ matrix.directory != '.' }}
+        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.14.0
+        with:
+          terraform-version: ${{ steps.minMax.outputs.minVersion }}
+          tflint-version: ${{ env.TFLINT_VERSION }}
+          args: 'terraform_validate --color=always --show-diff-on-failure --files ${{ matrix.directory }}/*'
+
+      - name: Pre-commit Terraform ${{ steps.minMax.outputs.minVersion }}
+        if: ${{ matrix.directory == '.' }}
+        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.14.0
+        with:
+          terraform-version: ${{ steps.minMax.outputs.minVersion }}
+          tflint-version: ${{ env.TFLINT_VERSION }}
+          args: 'terraform_validate --color=always --show-diff-on-failure --files $(ls *.tf)'
+
+  # Full hook suite (fmt, docs, tflint, validate) on the newest Terraform.
+  preCommitMaxVersion:
+    name: Max TF pre-commit
+    runs-on: ubuntu-latest
+    needs: collectInputs
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # Fall back to the pushed ref: github.event.pull_request is null when
+          # this workflow runs on a push to main.
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+
+      - name: Terraform min/max versions
+        id: minMax
+        uses: clowdhaus/terraform-min-max@v3.0.1
+
+      - name: Pre-commit Terraform ${{ steps.minMax.outputs.maxVersion }}
+        uses: clowdhaus/terraform-composite-actions/pre-commit@v1.14.0
+        with:
+          terraform-version: ${{ steps.minMax.outputs.maxVersion }}
+          tflint-version: ${{ env.TFLINT_VERSION }}
+          terraform-docs-version: ${{ env.TERRAFORM_DOCS_VERSION }}
+          # hcledit is not installed: it exists only to serve
+          # terraform_wrapper_module_for_each, which this repo does not run.

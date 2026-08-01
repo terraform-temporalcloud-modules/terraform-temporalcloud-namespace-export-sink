@@ -1,0 +1,46 @@
+name: 'Validate PR title'
+
+# Squash-merge uses the PR title as the commit message, and semantic-release
+# derives the next version from those messages. An invalid title silently breaks
+# versioning, so it is enforced here.
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+permissions:
+  pull-requests: read
+  # `wip: true` reports its state as a commit status, which needs write access.
+  # The org default GITHUB_TOKEN scope is read-only, so it must be granted here.
+  statuses: write
+
+jobs:
+  main:
+    name: Validate PR title
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v6.1.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # `test` and `refactor` produce no release under the conventionalcommits
+          # preset, same as docs, ci and chore. They are allowed so test-only and
+          # refactor-only changes do not have to be mislabelled.
+          types: |
+            fix
+            feat
+            docs
+            ci
+            chore
+            test
+            refactor
+          requireScope: false
+          subjectPattern: ^[A-Z].+$
+          subjectPatternError: |
+            The subject "{subject}" found in the pull request title "{title}"
+            didn't match the configured pattern. Please ensure that the subject
+            starts with an uppercase character.
+          wip: true
+          validateSingleCommit: false
